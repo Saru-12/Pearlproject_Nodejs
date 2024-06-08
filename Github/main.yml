@@ -1,0 +1,44 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build Docker image
+      run: docker build . -t ${{ secrets.211125589162 }}.dkr.ecr.${{ secrets.us-east-1 }}.amazonaws.com/${{ secrets.ECR_REPO_NAME }}:latest
+
+    - name: Log in to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+      with:
+        region: ${{ secrets.us-east-1 }}
+
+    - name: Push Docker image to ECR
+      run: |
+        docker tag ${{ secrets.211125589162}}.dkr.ecr.${{ secrets.us-east-1 }}.amazonaws.com/${{ secrets.pearl }}:latest
+        docker push ${{ secrets.211125589162 }}.dkr.ecr.${{ secrets.us-east-1 }}.amazonaws.com/${{ secrets.pearl }}:latest
+
+    - name: Deploy to ECS
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ecs-task-definition.json
+        service: ${{ secrets.var.app_name }}
+        cluster: ${{ secrets.aws_ecs_cluster.main.id }}
+        wait-for-service-stability: true
